@@ -5,7 +5,7 @@ from PIL import Image
 from pathlib import Path
 import multiprocessing as mp
 from dataclasses import dataclass
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Union
 
 from .schemes import Theme
 from vars import (
@@ -93,15 +93,19 @@ class Selector:
 		)
 
 	@classmethod
-	def select_wallpaper(cls, theme: Theme) -> Optional[Path]:
+	def select_wallpaper(cls, theme: Theme) -> Optional[Union[Path, str]]:
 		elements: Dict[str, Path] = {wall.name: wall for wall in theme.available_wallpapers}
+		
+		# Generate the rofi list with wallpapers
+		rofi_list = [f"Add Wallpaper\x00icon\x1f{str(MEOWRCH_ASSETS / 'add.png')}"] + cls._generate_rofi_list(
+			elements=elements,
+			cache_dir=WALLPAPERS_CACHE_DIR,
+			random_el_text="Random Wallpaper"
+		)
+		
 		response = cls._selection(
 			title="Choose a wallpaper:",
-			input_list=cls._generate_rofi_list(
-				elements=elements,
-				cache_dir=WALLPAPERS_CACHE_DIR,
-				random_el_text="Random Wallpaper"
-			)
+			input_list=rofi_list
 		)
 
 		if response.exit_code != 0:
@@ -110,6 +114,9 @@ class Selector:
 
 		if response.selected_item == "Random Wallpaper":
 			return random.choice(theme.available_wallpapers)
+		elif response.selected_item == "Add Wallpaper":
+			# Return a special marker to indicate add wallpaper action
+			return "ADD_WALLPAPER"
 		
 		wall_selection_path = next((p for p in theme.available_wallpapers if p.name == response.selected_item), None)
 
@@ -118,6 +125,53 @@ class Selector:
 
 		logging.debug("The wallpaper is not selected")
 		return None
+	
+	@classmethod
+	def select_wallpaper_file(cls) -> Optional[Path]:
+		"""
+		Opens a file dialog to select a wallpaper file to add.
+		
+		Returns:
+			Optional[Path]: Path to selected wallpaper file or None if cancelled
+		"""
+		try:
+			# Use zenity for file selection dialog
+			selection = subprocess.run([
+				"zenity", "--file-selection",
+				"--title=Select a wallpaper image",
+				"--file-filter=Image files | *.png *.jpg *.jpeg *.webp *.bmp *.gif",
+				"--file-filter=All files | *"
+			], capture_output=True, text=True)
+			
+			if selection.returncode == 0 and selection.stdout.strip():
+				return Path(selection.stdout.strip())
+			
+			logging.debug("File selection was cancelled")
+			return None
+			
+		except FileNotFoundError:
+			logging.warning("zenity not found, trying with rofi file browser")
+			
+			# Fallback to simple text input with rofi
+			selection = subprocess.run([
+				"rofi", "-dmenu", "-p", "Enter wallpaper path:", 
+				"-theme", str(ROFI_SELECTING_THEME)
+			], input="", capture_output=True, text=True)
+			
+			if selection.returncode == 0 and selection.stdout.strip():
+				selected_path = Path(selection.stdout.strip()).expanduser()
+				if selected_path.exists():
+					return selected_path
+				else:
+					logging.error(f"Selected path does not exist: {selected_path}")
+					return None
+			
+			logging.debug("Path input was cancelled")
+			return None
+			
+		except Exception as e:
+			logging.error(f"Error during file selection: {e}")
+			return None
 
 	@classmethod
 	def select_theme(cls, all_themes: List[Theme]) -> None:

@@ -184,3 +184,34 @@ class Config:
 
 		Config.__dump_yaml(data)
 		
+	@classmethod
+	def _add_wallpaper_to_theme(cls, theme_name: str, wallpaper_path: str) -> None:
+		"""
+		Adds a wallpaper to the specified theme's available_wallpapers list in config.
+		
+		Args:
+			theme_name: Name of the theme to add the wallpaper to
+			wallpaper_path: Path to the wallpaper file
+		"""
+		data = cls.__load_yaml()
+		
+		if 'themes' not in data or data['themes'] is None:
+			raise ValueError("No themes found in config")
+			
+		if theme_name not in data['themes']:
+			raise ValueError(f"Theme '{theme_name}' not found in config")
+			
+		theme_data = data['themes'][theme_name]
+		
+		if theme_data is None:
+			theme_data = {}
+			data['themes'][theme_name] = theme_data
+			
+		if 'available_wallpapers' not in theme_data or theme_data['available_wallpapers'] is None:
+			theme_data['available_wallpapers'] = []
+			
+		# Check if wallpaper already exists
+		if wallpaper_path not in theme_data['available_wallpapers']:
+			theme_data['available_wallpapers'].append(wallpaper_path)
+			cls.__dump_yaml(data)
+			logging.debug(f"Added wallpaper '{wallpaper_path}' to theme '{theme_name}' in config")

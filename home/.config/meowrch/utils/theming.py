@@ -109,6 +109,104 @@ class ThemeManager:
 		if theme is not None:
 			self.set_theme(theme)
 
+	def add_wallpaper_to_theme(self, wallpaper: Union[str, Path], theme_name: Optional[str] = None) -> bool:
+		"""
+		Adds a new wallpaper to the specified theme's available wallpapers list.
+		
+		Args:
+			wallpaper: Path to the wallpaper file to add
+			theme_name: Name of the theme to add wallpaper to. If None, uses current theme.
+			
+		Returns:
+			bool: True if wallpaper was added successfully, False otherwise
+		"""
+		if theme_name is None:
+			theme_name = self.current_theme.name
+			
+		wallpaper_path = Path(wallpaper).expanduser().resolve()
+		
+		# Validate wallpaper exists
+		if not wallpaper_path.exists():
+			logging.error(f"Wallpaper file does not exist: {wallpaper_path}")
+			notify("Error", f"Wallpaper file not found: {wallpaper_path}", critical=True)
+			return False
+			
+		# Validate it's an image file
+		valid_extensions = {'.png', '.jpg', '.jpeg', '.webp', '.bmp', '.gif'}
+		if wallpaper_path.suffix.lower() not in valid_extensions:
+			logging.error(f"Invalid wallpaper file format: {wallpaper_path.suffix}")
+			notify("Error", f"Invalid image format: {wallpaper_path.suffix}", critical=True)
+			return False
+		
+		# Check if theme exists
+		if theme_name not in self.themes:
+			logging.error(f"Theme '{theme_name}' not found")
+			notify("Error", f"Theme '{theme_name}' not found", critical=True)
+			return False
+			
+		theme = self.themes[theme_name]
+		
+		# Check if wallpaper is already in the theme
+		if wallpaper_path in theme.available_wallpapers:
+			logging.warning(f"Wallpaper already exists in theme '{theme_name}': {wallpaper_path}")
+			notify("Info", f"Wallpaper already in theme '{theme_name}'")
+			return True
+			
+		# Add wallpaper to theme's available wallpapers
+		theme.available_wallpapers.append(wallpaper_path)
+		
+		# Convert path to use ~ notation for config storage
+		home_path = Path.home()
+		try:
+			# If the path is under home directory, use ~ notation
+			relative_path = wallpaper_path.relative_to(home_path)
+			config_path = f"~/{relative_path}"
+		except ValueError:
+			# If not under home directory, use absolute path
+			config_path = str(wallpaper_path)
+		
+		# Update config file
+		try:
+			Config._add_wallpaper_to_theme(theme_name, config_path)
+			logging.info(f"Successfully added wallpaper to theme '{theme_name}': {wallpaper_path}")
+			notify("Success", f"Wallpaper added to theme '{theme_name}'")
+			return True
+		except Exception:
+			logging.error(f"Failed to update config: {traceback.format_exc()}")
+			# Rollback the change
+			theme.available_wallpapers.remove(wallpaper_path)
+			notify("Error", "Failed to update configuration", critical=True)
+			return False
+
+	def _handle_add_wallpaper(self) -> None:
+		"""
+		Handles the process of adding a new wallpaper to the current theme.
+		Opens file dialog, validates the selection, copies to wallpapers folder, adds to theme, and sets it.
+		"""
+		logging.debug("Starting add wallpaper process")
+		
+		# Get the wallpaper file from user
+		wallpaper_file = Selector.select_wallpaper_file()
+		
+		if wallpaper_file is None:
+			logging.debug("No wallpaper file selected")
+			return
+		
+		# Copy wallpaper to wallpapers folder and add to theme
+		copied_wallpaper = self._copy_wallpaper_to_folder(wallpaper_file)
+		
+		if copied_wallpaper is None:
+			return
+			
+		# Add the wallpaper to the current theme
+		if self.add_wallpaper_to_theme(copied_wallpaper):
+			# Automatically set the new wallpaper and close the menu
+			self.set_wallpaper(copied_wallpaper)
+			logging.info(f"Added and set new wallpaper: {copied_wallpaper}")
+			notify("Success", f"Wallpaper added and applied: {copied_wallpaper.name}")
+		else:
+			logging.error(f"Failed to add wallpaper to theme: {copied_wallpaper}")
+
 	def set_wallpaper(self, wallpaper: Path) -> None:
 		logging.debug(f"The process of setting a wallpaper \"{wallpaper}\" has begun")
 		
@@ -170,6 +268,61 @@ class ThemeManager:
 
 		Config._set_wallpaper(wallpaper)
 		logging.debug("The process of selecting a wallpaper has finished")
+	
+	def _copy_wallpaper_to_folder(self, source_wallpaper: Path) -> Optional[Path]:
+		"""
+		Copy wallpaper to the meowrch wallpapers folder.
+		
+		Args:
+			source_wallpaper: Path to the source wallpaper file
+			
+		Returns:
+			Optional[Path]: Path to the copied wallpaper in wallpapers folder, or None if failed
+		"""
+		from vars import MEOWRCH_DIR
+		import shutil
+		
+		wallpapers_dir = MEOWRCH_DIR / "wallpapers"
+		wallpapers_dir.mkdir(exist_ok=True)
+		
+		source_path = Path(source_wallpaper).expanduser().resolve()
+		
+		# Validate source wallpaper exists
+		if not source_path.exists():
+			logging.error(f"Source wallpaper file does not exist: {source_path}")
+			notify("Error", f"Wallpaper file not found: {source_path}", critical=True)
+			return None
+			
+		# Validate it's an image file
+		valid_extensions = {'.png', '.jpg', '.jpeg', '.webp', '.bmp', '.gif'}
+		if source_path.suffix.lower() not in valid_extensions:
+			logging.error(f"Invalid wallpaper file format: {source_path.suffix}")
+			notify("Error", f"Invalid image format: {source_path.suffix}", critical=True)
+			return None
+		
+		# Create destination path
+		destination_path = wallpapers_dir / source_path.name
+		
+		# If file with same name exists, add number suffix
+		counter = 1
+		original_destination = destination_path
+		while destination_path.exists():
+			stem = original_destination.stem
+			suffix = original_destination.suffix
+			destination_path = wallpapers_dir / f"{stem}_{counter}{suffix}"
+			counter += 1
+		
+		try:
+			# Copy the file
+			shutil.copy2(source_path, destination_path)
+			logging.info(f"Copied wallpaper from {source_path} to {destination_path}")
+			notify("Success", f"Wallpaper copied to: {destination_path.name}")
+			return destination_path
+			
+		except Exception as e:
+			logging.error(f"Failed to copy wallpaper: {e}")
+			notify("Error", f"Failed to copy wallpaper: {e}", critical=True)
+			return None
 
 	def set_current_wallpaper(self) -> None:
 		logging.debug("The process of setting a current wallpaper has begun")
@@ -204,5 +357,9 @@ class ThemeManager:
 			return
 
 		if wallpaper is not None:
-			self.set_wallpaper(wallpaper)
-			return
+			if wallpaper == "ADD_WALLPAPER":
+				# Handle adding a new wallpaper (this will set it and close the menu)
+				self._handle_add_wallpaper()
+				return  # Return immediately to close the menu
+			else:
+				self.set_wallpaper(wallpaper)
