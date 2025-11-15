@@ -15,6 +15,7 @@ class PostInstallation:
         PostInstallation._add_to_gamemode_group()
         PostInstallation._set_default_term()
         PostInstallation._ensure_en_us_locale()
+        PostInstallation._configure_mewline()
         logger.info("The post-installation configuration is complete!")
 
     @staticmethod
@@ -117,3 +118,26 @@ class PostInstallation:
         except Exception:
             logger.error(f"Error setting default terminal: {traceback.format_exc()}")
             return False
+
+    @staticmethod
+    def _configure_mewline() -> None:
+        """Configure mewline after installation"""
+        try:
+            logger.info("Configuring mewline...")
+            
+            # Generate the default config
+            subprocess.run(["mewline", "--generate-default-config"], check=True)
+            logger.success("Generated mewline default config!")
+            
+            # Generate keybindings for Hyprland
+            subprocess.run(["mewline", "--create-keybindings"], check=True)
+            logger.success("Generated mewline Hyprland keybindings!")
+            
+            logger.info("Mewline configuration complete! You can edit the config at ~/.config/mewline/config.json")
+            
+        except subprocess.CalledProcessError as e:
+            logger.warning(f"Error configuring mewline: {e}")
+        except FileNotFoundError:
+            logger.warning("Mewline not found. It may not have been installed properly.")
+        except Exception:
+            logger.error(f"Unexpected error configuring mewline: {traceback.format_exc()}")
