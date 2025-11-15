@@ -29,7 +29,7 @@ class AppsManager:
                 [
                     "code",
                     "--install-extension",
-                    "./misc/apps/vscode/meowrch-theme-1.0.0.vsix",
+                    "jdinhlife.gruvbox",
                 ],
                 check=True,
             )
