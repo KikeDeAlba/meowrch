@@ -102,8 +102,8 @@ for vscode in [".vscode", ".vscode-oss"]:
 			CopyOrGenOption(
 				_id="vscode",
 				name="vscode.json",
-				path_to=HOME / vscode / "extensions" / "dimflix-official.meowrch-theme-1.0.0" / "themes" / "meowrch-theme.json",
-				template_name="vscode.mustache"
+				path_to=HOME / vscode / "extensions" / "jdinhlife.gruvbox-1.29.0" / "themes" / "gruvbox-dark-soft.json",
+				template_name="vscode.akoz"
 			)
 		)
 

@@ -1,5 +1,5 @@
 {
-    "workbench.colorTheme": "Meowrch Theme",
+    "workbench.colorTheme": "Gruvbox Dark Soft",
     "window.menuBarVisibility": "toggle",
     "editor.fontSize": 13,
     "editor.scrollbar.vertical": "hidden",
@@ -14,5 +14,6 @@
     "terminal.external.linuxExec": "kitty",
     "terminal.explorerKind": "both",
     "terminal.sourceControlRepositoriesKind": "both",
-    "telemetry.telemetryLevel": "off"
+    "telemetry.telemetryLevel": "off",
+    "workbench.sideBar.location": "right"
 }
