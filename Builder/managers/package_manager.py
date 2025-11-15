@@ -241,3 +241,43 @@ class PackageManager:
                 )
         else:
             logger.warning("Pacman configuration skipped... (file not found)")
+
+    @staticmethod
+    def install_nvm() -> None:
+        """Install nvm (Node Version Manager) and Node.js LTS"""
+        logger.info("Starting nvm (Node Version Manager) installation process.")
+        
+        try:
+            # Install fisher plugins for fish shell
+            logger.info("Installing fisher plugins for fish shell...")
+            subprocess.run(["fisher", "install", "edc/bass"], check=True)
+            subprocess.run(["fisher", "install", "FabioAntunes/fish-nvm"], check=True)
+            
+            # Install nvm from AUR
+            logger.info("Installing nvm from AUR...")
+            subprocess.run(["yay", "-S", "--noconfirm", "--needed", "extra/nvm"], check=True)
+            
+            # Create nvm directory and symlink
+            user = os.environ.get('USER', 'root')
+            nvm_dir = f"/home/{user}/.nvm"
+            os.makedirs(nvm_dir, exist_ok=True)
+            
+            nvm_script_src = "/usr/share/nvm/nvm.sh"
+            nvm_script_dst = f"{nvm_dir}/nvm.sh"
+            
+            # Remove existing symlink if it exists
+            if os.path.exists(nvm_script_dst) or os.path.islink(nvm_script_dst):
+                os.unlink(nvm_script_dst)
+            
+            # Create symlink
+            os.symlink(nvm_script_src, nvm_script_dst)
+            logger.info(f"Created symlink: {nvm_script_dst} -> {nvm_script_src}")
+            
+            # Install LTS version of Node.js
+            logger.info("Installing Node.js LTS version...")
+            subprocess.run(["bash", "-c", "source ~/.nvm/nvm.sh && nvm install --lts"], check=True)
+            
+            logger.success("nvm and Node.js LTS have been successfully installed!")
+            
+        except Exception:
+            logger.error(f"Error while installing nvm: {traceback.format_exc()}")

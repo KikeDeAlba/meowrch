@@ -69,6 +69,9 @@ class Builder:
             tampermonkey=self.build_options.ff_tampermonkey,
         )
         AppsManager.configure_code()
+        
+        # Install nvm (Node Version Manager)
+        PackageManager.install_nvm()
 
         self.daemons_setting()
         PostInstallation.apply()

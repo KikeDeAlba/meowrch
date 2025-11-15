@@ -47,7 +47,6 @@ for package in "${packages[@]}"; do
         pip install $package --break-system-packages
     fi
 done
-#######################################################
 
 
 ##==> Building the system
