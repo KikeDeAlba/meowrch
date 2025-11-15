@@ -53,7 +53,7 @@ class Selector:
 		"""
 
 		cache_dir.mkdir(parents=True, exist_ok=True)
-		rofi_list = [f"{random_el_text}\x00icon\x1f{str(MEOWRCH_ASSETS / 'random.png')}"]
+		rofi_list = []
 
 		image_paths = []
 		thumbnails = []
@@ -74,8 +74,12 @@ class Selector:
 		return rofi_list
 
 	@classmethod
-	def _selection(cls, title: str, input_list: list, override_theme: str = None) -> RofiResponse:
+	def _selection(cls, title: str, input_list: list, override_theme: str = None, enable_remove: bool = False) -> RofiResponse:
 		command = ["rofi", "-dmenu", "-i", "-p", title, "-theme", str(ROFI_SELECTING_THEME)]
+
+		# Add key bindings for removal if enabled
+		if enable_remove:
+			command.extend(["-kb-custom-1", "r"])
 
 		if override_theme is not None:
 			command.extend(["-theme-str", override_theme])
@@ -93,7 +97,7 @@ class Selector:
 		)
 
 	@classmethod
-	def select_wallpaper(cls, theme: Theme) -> Optional[Union[Path, str]]:
+	def select_wallpaper(cls, theme: Theme) -> Optional[Union[Path, str, tuple]]:
 		elements: Dict[str, Path] = {wall.name: wall for wall in theme.available_wallpapers}
 		
 		# Generate the rofi list with wallpapers
@@ -104,11 +108,22 @@ class Selector:
 		)
 		
 		response = cls._selection(
-			title="Choose a wallpaper:",
-			input_list=rofi_list
+			title="Choose a wallpaper (press 'r' to remove):",
+			input_list=rofi_list,
+			enable_remove=True
 		)
 
-		if response.exit_code != 0:
+		if response.exit_code == 10:  # Exit code 10 means custom key 1 (r) was pressed
+			# Handle removal action
+			if response.selected_item in ["Random Wallpaper", "Add Wallpaper"]:
+				logging.debug("Cannot remove special items")
+				return None
+				
+			wall_to_remove = next((p for p in theme.available_wallpapers if p.name == response.selected_item), None)
+			if wall_to_remove is not None:
+				return ("REMOVE_WALLPAPER", wall_to_remove)
+				
+		if response.exit_code not in [0, 10]:
 			logging.debug("The wallpaper selection has been canceled")
 			return None
 

@@ -178,6 +178,85 @@ class ThemeManager:
 			notify("Error", "Failed to update configuration", critical=True)
 			return False
 
+	def remove_wallpaper_from_theme(self, wallpaper: Union[str, Path], theme_name: Optional[str] = None) -> bool:
+		"""
+		Removes a wallpaper from the specified theme's available wallpapers list.
+		
+		Args:
+			wallpaper: Path to the wallpaper file to remove
+			theme_name: Name of the theme to remove wallpaper from. If None, uses current theme.
+			
+		Returns:
+			bool: True if wallpaper was removed successfully, False otherwise
+		"""
+		from vars import WALLPAPERS_CACHE_DIR
+		
+		if theme_name is None:
+			theme_name = self.current_theme.name
+			
+		wallpaper_path = Path(wallpaper).expanduser().resolve()
+		
+		# Check if theme exists
+		if theme_name not in self.themes:
+			logging.error(f"Theme '{theme_name}' not found")
+			notify("Error", f"Theme '{theme_name}' not found", critical=True)
+			return False
+			
+		theme = self.themes[theme_name]
+		
+		# Check if wallpaper exists in the theme
+		if wallpaper_path not in theme.available_wallpapers:
+			logging.warning(f"Wallpaper not found in theme '{theme_name}': {wallpaper_path}")
+			notify("Warning", f"Wallpaper not found in theme '{theme_name}'")
+			return False
+		
+		# Check if it's the last wallpaper in the theme
+		if len(theme.available_wallpapers) <= 1:
+			logging.warning(f"Cannot remove the last wallpaper from theme '{theme_name}'")
+			notify("Warning", "Cannot remove the last wallpaper from theme", critical=True)
+			return False
+			
+		# Remove wallpaper from theme's available wallpapers
+		theme.available_wallpapers.remove(wallpaper_path)
+		
+		# Remove cached thumbnail
+		try:
+			cache_thumbnail = WALLPAPERS_CACHE_DIR / f"{wallpaper_path.stem}.png"
+			if cache_thumbnail.exists():
+				cache_thumbnail.unlink()
+				logging.debug(f"Removed cached thumbnail: {cache_thumbnail}")
+		except Exception:
+			logging.warning(f"Failed to remove cached thumbnail: {traceback.format_exc()}")
+		
+		# Convert path to use ~ notation for config storage
+		home_path = Path.home()
+		try:
+			# If the path is under home directory, use ~ notation
+			relative_path = wallpaper_path.relative_to(home_path)
+			config_path = f"~/{relative_path}"
+		except ValueError:
+			# If not under home directory, use absolute path
+			config_path = str(wallpaper_path)
+		
+		# Update config file
+		try:
+			Config._remove_wallpaper_from_theme(theme_name, config_path)
+			logging.info(f"Successfully removed wallpaper from theme '{theme_name}': {wallpaper_path}")
+			notify("Success", f"Wallpaper removed from theme '{theme_name}'")
+			
+			# If the removed wallpaper was the current one, set a random one
+			current_wallpaper = Config.get_current_wallpaper()
+			if current_wallpaper and Path(current_wallpaper).resolve() == wallpaper_path:
+				self.set_random_wallpaper()
+				
+			return True
+		except Exception:
+			logging.error(f"Failed to update config: {traceback.format_exc()}")
+			# Rollback the change
+			theme.available_wallpapers.append(wallpaper_path)
+			notify("Error", "Failed to update configuration", critical=True)
+			return False
+
 	def _handle_add_wallpaper(self) -> None:
 		"""
 		Handles the process of adding a new wallpaper to the current theme.
@@ -351,15 +430,23 @@ class ThemeManager:
 		logging.debug("The process of selecting wallpapers using the rofi menu has begun")
 
 		try:
-			wallpaper = Selector.select_wallpaper(self.current_theme)
+			result = Selector.select_wallpaper(self.current_theme)
 		except:
 			logging.error(f"An error occurred while selecting wallpapers using rofi: {traceback.format_exc()}")
 			return
 
-		if wallpaper is not None:
-			if wallpaper == "ADD_WALLPAPER":
+		if result is not None:
+			if isinstance(result, tuple) and result[0] == "REMOVE_WALLPAPER":
+				# Handle removing a wallpaper
+				wallpaper_to_remove = result[1]
+				if self.remove_wallpaper_from_theme(wallpaper_to_remove):
+					logging.info(f"Removed wallpaper: {wallpaper_to_remove}")
+					# Continue the selection process to show updated list
+					self.select_wallpaper()
+				return
+			elif result == "ADD_WALLPAPER":
 				# Handle adding a new wallpaper (this will set it and close the menu)
 				self._handle_add_wallpaper()
 				return  # Return immediately to close the menu
 			else:
-				self.set_wallpaper(wallpaper)
+				self.set_wallpaper(result)

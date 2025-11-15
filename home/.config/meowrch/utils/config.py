@@ -215,3 +215,31 @@ class Config:
 			theme_data['available_wallpapers'].append(wallpaper_path)
 			cls.__dump_yaml(data)
 			logging.debug(f"Added wallpaper '{wallpaper_path}' to theme '{theme_name}' in config")
+
+	@classmethod
+	def _remove_wallpaper_from_theme(cls, theme_name: str, wallpaper_path: str) -> None:
+		"""
+		Removes a wallpaper from the specified theme's available_wallpapers list in config.
+		
+		Args:
+			theme_name: Name of the theme to remove the wallpaper from
+			wallpaper_path: Path to the wallpaper file
+		"""
+		data = cls.__load_yaml()
+		
+		if 'themes' not in data or data['themes'] is None:
+			raise ValueError("No themes found in config")
+			
+		if theme_name not in data['themes']:
+			raise ValueError(f"Theme '{theme_name}' not found in config")
+			
+		theme_data = data['themes'][theme_name]
+		
+		if theme_data is None or 'available_wallpapers' not in theme_data or theme_data['available_wallpapers'] is None:
+			return  # No wallpapers to remove
+			
+		# Remove wallpaper if it exists
+		if wallpaper_path in theme_data['available_wallpapers']:
+			theme_data['available_wallpapers'].remove(wallpaper_path)
+			cls.__dump_yaml(data)
+			logging.debug(f"Removed wallpaper '{wallpaper_path}' from theme '{theme_name}' in config")
