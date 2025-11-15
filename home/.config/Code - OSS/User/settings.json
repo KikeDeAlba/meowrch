@@ -10,7 +10,7 @@
     "editor.minimap.side": "left",
     "editor.fontFamily": "'Droid Sans Mono', 'monospace', monospace, 'Hack Nerd Font'",
     "extensions.autoUpdate": false,
-    "workbench.statusBar.visible": false,
+    "workbench.statusBar.visible": true,
     "terminal.external.linuxExec": "kitty",
     "terminal.explorerKind": "both",
     "terminal.sourceControlRepositoriesKind": "both",
