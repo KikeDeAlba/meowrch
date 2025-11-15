@@ -219,7 +219,7 @@ class Config:
 	@classmethod
 	def _remove_wallpaper_from_theme(cls, theme_name: str, wallpaper_path: str) -> None:
 		"""
-		Removes a wallpaper from the specified theme's available_wallpapers list in config.
+		Removes a wallpaper from the specified theme's available_wallpapers list and from custom-wallpapers list in config.
 		
 		Args:
 			theme_name: Name of the theme to remove the wallpaper from
@@ -227,19 +227,26 @@ class Config:
 		"""
 		data = cls.__load_yaml()
 		
-		if 'themes' not in data or data['themes'] is None:
-			raise ValueError("No themes found in config")
-			
-		if theme_name not in data['themes']:
-			raise ValueError(f"Theme '{theme_name}' not found in config")
-			
-		theme_data = data['themes'][theme_name]
+		config_updated = False
 		
-		if theme_data is None or 'available_wallpapers' not in theme_data or theme_data['available_wallpapers'] is None:
-			return  # No wallpapers to remove
-			
-		# Remove wallpaper if it exists
-		if wallpaper_path in theme_data['available_wallpapers']:
-			theme_data['available_wallpapers'].remove(wallpaper_path)
+		# Remove from theme's available_wallpapers
+		if 'themes' in data and data['themes'] is not None:
+			if theme_name in data['themes']:
+				theme_data = data['themes'][theme_name]
+				if theme_data is not None and 'available_wallpapers' in theme_data and theme_data['available_wallpapers'] is not None:
+					if wallpaper_path in theme_data['available_wallpapers']:
+						theme_data['available_wallpapers'].remove(wallpaper_path)
+						config_updated = True
+						logging.debug(f"Removed wallpaper '{wallpaper_path}' from theme '{theme_name}' available_wallpapers")
+		
+		# Remove from custom-wallpapers global list
+		if 'custom-wallpapers' in data and data['custom-wallpapers'] is not None:
+			if wallpaper_path in data['custom-wallpapers']:
+				data['custom-wallpapers'].remove(wallpaper_path)
+				config_updated = True
+				logging.debug(f"Removed wallpaper '{wallpaper_path}' from custom-wallpapers list")
+		
+		# Save config if any changes were made
+		if config_updated:
 			cls.__dump_yaml(data)
-			logging.debug(f"Removed wallpaper '{wallpaper_path}' from theme '{theme_name}' in config")
+			logging.debug(f"Config updated after removing wallpaper '{wallpaper_path}'")

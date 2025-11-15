@@ -86,6 +86,26 @@ class ThemeManager:
 		logging.debug("The process of setting a current theme has begun")
 		self.set_theme(self.current_theme)
 
+	def _reload_current_theme(self) -> None:
+		"""
+		Reloads the current theme from the config to reflect any changes made to the theme.
+		"""
+		logging.debug("Reloading current theme from config")
+		current_theme_name = self.current_theme.name
+		
+		# Reload all themes from config
+		updated_themes = {theme.name: theme for theme in Config.get_all_themes()}
+		
+		if current_theme_name in updated_themes:
+			# Update the themes dictionary and current theme
+			self.themes = updated_themes
+			self.current_theme = updated_themes[current_theme_name]
+			logging.debug(f"Successfully reloaded theme '{current_theme_name}'")
+		else:
+			logging.warning(f"Theme '{current_theme_name}' not found after reload")
+			# Fallback to setting a random theme
+			self.set_random_theme()
+
 	def set_random_theme(self) -> None:
 		logging.debug("The process of setting a random theme has begun")
 		th = list(self.themes.values())
@@ -241,6 +261,17 @@ class ThemeManager:
 		# Update config file
 		try:
 			Config._remove_wallpaper_from_theme(theme_name, config_path)
+			
+			# Remove the physical wallpaper file if it exists in the wallpapers directory
+			from vars import MEOWRCH_DIR
+			wallpapers_dir = MEOWRCH_DIR / "wallpapers"
+			if wallpaper_path.parent == wallpapers_dir and wallpaper_path.exists():
+				try:
+					wallpaper_path.unlink()
+					logging.debug(f"Deleted physical wallpaper file: {wallpaper_path}")
+				except Exception:
+					logging.warning(f"Failed to delete physical wallpaper file: {traceback.format_exc()}")
+			
 			logging.info(f"Successfully removed wallpaper from theme '{theme_name}': {wallpaper_path}")
 			notify("Success", f"Wallpaper removed from theme '{theme_name}'")
 			
@@ -441,6 +472,8 @@ class ThemeManager:
 				wallpaper_to_remove = result[1]
 				if self.remove_wallpaper_from_theme(wallpaper_to_remove):
 					logging.info(f"Removed wallpaper: {wallpaper_to_remove}")
+					# Reload the current theme to reflect changes from config
+					self._reload_current_theme()
 					# Continue the selection process to show updated list
 					self.select_wallpaper()
 				return
