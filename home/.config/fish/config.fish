@@ -46,4 +46,4 @@ pyenv init - | source
 #####################################
 ##==> Fun Stuff
 #####################################
-pokemon-colorscripts --no-title -s -r 1,3,6
+fastfetch
