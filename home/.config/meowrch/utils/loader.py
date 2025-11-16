@@ -96,17 +96,6 @@ theme_options: List[BaseOption] = [
 	)
 ]
 
-for vscode in [".vscode", ".vscode-oss"]:
-	if Path(HOME / vscode).exists():
-		theme_options.append(
-			CopyOrGenOption(
-				_id="vscode",
-				name="vscode.json",
-				path_to=HOME / vscode / "extensions" / "jdinhlife.gruvbox-1.29.0" / "themes" / "gruvbox-dark-soft.json",
-				template_name="vscode.akoz"
-			)
-		)
-
 ##==> Логирование
 ###############################################
 log_file = MEOWRCH_DIR / "logs.log"
