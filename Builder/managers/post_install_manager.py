@@ -2,6 +2,8 @@ import os
 import subprocess
 import tempfile
 import traceback
+import json
+from pathlib import Path
 
 from loguru import logger
 from packages import CUSTOM
@@ -129,6 +131,9 @@ class PostInstallation:
             subprocess.run(["mewline", "--generate-default-config"], check=True)
             logger.success("Generated mewline default config!")
             
+            # Update config to add -98 to ignored workspaces
+            PostInstallation._update_mewline_config()
+            
             # Generate keybindings for Hyprland
             subprocess.run(["mewline", "--create-keybindings"], check=True)
             logger.success("Generated mewline Hyprland keybindings!")
@@ -141,3 +146,39 @@ class PostInstallation:
             logger.warning("Mewline not found. It may not have been installed properly.")
         except Exception:
             logger.error(f"Unexpected error configuring mewline: {traceback.format_exc()}")
+
+    @staticmethod
+    def _update_mewline_config() -> None:
+        """Update mewline config.json to add -98 to ignored workspaces"""
+        try:
+            # Get the home directory and config path
+            home_dir = os.path.expanduser("~")
+            config_path = Path(home_dir) / ".config" / "mewline" / "config.json"
+            
+            if not config_path.exists():
+                logger.warning("Mewline config.json not found, skipping workspace configuration")
+                return
+            
+            # Read the current config
+            with open(config_path, 'r') as f:
+                config = json.load(f)
+            
+            # Add -98 to ignored workspaces if not already present
+            if "modules" in config and "workspaces" in config["modules"]:
+                ignored = config["modules"]["workspaces"].get("ignored", [])
+                if -98 not in ignored:
+                    ignored.append(-98)
+                    config["modules"]["workspaces"]["ignored"] = ignored
+                    
+                    # Write the updated config back
+                    with open(config_path, 'w') as f:
+                        json.dump(config, f, indent=4)
+                    
+                    logger.success("Added workspace -98 to mewline ignored list")
+                else:
+                    logger.info("Workspace -98 already in mewline ignored list")
+            else:
+                logger.warning("Mewline config structure unexpected, skipping workspace configuration")
+                
+        except Exception as e:
+            logger.warning(f"Error updating mewline config: {e}")
