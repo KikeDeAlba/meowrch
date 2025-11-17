@@ -30,7 +30,7 @@ class Question:
 
             category_question = inquirer.List(
                 "category",
-                message="8) Select a category of packages and choose the ones you want",
+                message="9) Select a category of packages and choose the ones you want",
                 choices=list(
                     category
                     + f" | {Fore.YELLOW}Selected: {selected_counts[category]}"
@@ -99,21 +99,21 @@ class Question:
                 name="make_backup",
                 message="1) Want to backup your configurations?",
                 choices=["Yes", "No"],
-                default="Yes",
+                default="No",
                 carousel=True,
             ),
             QuestionCheckbox(
                 name="install_wm",
                 message="2) Which window manager do you want to install?",
                 choices=["hyprland", "bspwm"],
-                default=["bspwm", "hyprland"],
+                default=["hyprland"],
                 carousel=True,
             ),
             QuestionList(
                 name="aur_helper",
                 message="3) What kind of AUR helper do you want to have?",
                 choices=["yay", "paru"],
-                default="paru",
+                default="yay",
                 carousel=True,
             ),
             QuestionList(
@@ -130,18 +130,25 @@ class Question:
                 default="Yes",
                 carousel=True,
             ),
+            QuestionList(
+                name="auto_update_packages",
+                message="6) Enable automatic package updates at startup?",
+                choices=["Yes", "No"],
+                default="Yes",
+                carousel=True,
+            ),
             QuestionCheckbox(
                 name="install_drivers",
-                message="6) What drivers do you want to install?",
+                message="7) What drivers do you want to install?",
                 choices=["Nvidia", "Intel", "AMD"],
                 default=drivers,
                 carousel=True,
             ),
             QuestionCheckbox(
                 name="ff_plugins",
-                message="7) Would you like to add useful plugins for firefox?",
+                message="8) Would you like to add useful plugins for firefox?",
                 choices=firefox_choices,
-                default=firefox_choices,
+                default={},
                 carousel=True,
             ),
         ]
@@ -168,6 +175,7 @@ class Question:
             aur_helper=aur_helper,
             enable_multilib=answers["enable_multilib"] == "Yes",
             update_arch_database=answers["update_arch_database"] == "Yes",
+            auto_update_packages=answers["auto_update_packages"] == "Yes",
             install_drivers=len(answers["install_drivers"]) > 0,
             intel_driver="Intel" in answers["install_drivers"],
             nvidia_driver="Nvidia" in answers["install_drivers"],

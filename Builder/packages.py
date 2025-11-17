@@ -64,14 +64,14 @@ DRIVERS = {
 
 CUSTOM = {
     "development": {
-        "obsidian": PackageInfo("A powerful knowledge base that works on top of a local folder of plain text Markdown files", recommended=True),
+        "obsidian": PackageInfo("A powerful knowledge base that works on top of a local folder of plain text Markdown files", recommended=True, selected=True),
         "postgresql": PackageInfo("Sophisticated object-relational DBMS", recommended=True),
         "pgadmin4-desktop": PackageInfo("The desktop user interface for pgAdmin", aur=True, recommended=True),
         "redis": PackageInfo("An in-memory database that persists on disk")
 	},
     "social_media": {
-		"telegram-desktop": PackageInfo("Popular messenger", recommended=True, selected=True),
-        "discord": PackageInfo("Popular social platform", recommended=True),
+		"telegram-desktop": PackageInfo("Popular messenger", recommended=True),
+        "discord": PackageInfo("Popular social platform", recommended=True, selected=True),
 		"vesktop": PackageInfo("Custom Discord client", recommended=True, aur=True)
 	},
 	"games": {

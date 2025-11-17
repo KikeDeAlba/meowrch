@@ -11,13 +11,17 @@ from packages import CUSTOM
 
 class PostInstallation:
     @staticmethod
-    def apply():
+    def apply(auto_update_packages: bool = False):
         logger.info("The post-installation configuration is starting...")
         PostInstallation._set_fish_shell()
         PostInstallation._add_to_gamemode_group()
         PostInstallation._set_default_term()
         PostInstallation._ensure_en_us_locale()
         PostInstallation._configure_mewline()
+        
+        if auto_update_packages:
+            PostInstallation._configure_auto_update()
+            
         logger.info("The post-installation configuration is complete!")
 
     @staticmethod
@@ -182,3 +186,49 @@ class PostInstallation:
                 
         except Exception as e:
             logger.warning(f"Error updating mewline config: {e}")
+
+    @staticmethod
+    def _configure_auto_update():
+        """Configure automatic package updates using systemd timer"""
+        try:
+            logger.info("Configuring automatic package updates...")
+            
+            # Copy the auto-update script to system location
+            script_source = Path(__file__).parent.parent.parent / "home" / "bin" / "meowrch-auto-update.sh"
+            script_dest = Path("/usr/local/bin/meowrch-auto-update.sh")
+            
+            if script_source.exists():
+                subprocess.run(["sudo", "cp", str(script_source), str(script_dest)], check=True)
+                subprocess.run(["sudo", "chmod", "+x", str(script_dest)], check=True)
+                logger.success("Auto-update script installed to /usr/local/bin/")
+            else:
+                logger.error("Auto-update script not found in source directory")
+                return
+            
+            # Copy systemd service and timer files
+            systemd_source_dir = Path(__file__).parent.parent.parent / "misc" / "systemd"
+            service_source = systemd_source_dir / "meowrch-auto-update.service"
+            timer_source = systemd_source_dir / "meowrch-auto-update.timer"
+            
+            systemd_dest_dir = Path("/etc/systemd/system/")
+            
+            if service_source.exists() and timer_source.exists():
+                subprocess.run(["sudo", "cp", str(service_source), str(systemd_dest_dir)], check=True)
+                subprocess.run(["sudo", "cp", str(timer_source), str(systemd_dest_dir)], check=True)
+                logger.success("Systemd service and timer files installed")
+            else:
+                logger.error("Systemd service or timer files not found")
+                return
+            
+            # Reload systemd and enable the timer
+            subprocess.run(["sudo", "systemctl", "daemon-reload"], check=True)
+            subprocess.run(["sudo", "systemctl", "enable", "meowrch-auto-update.timer"], check=True)
+            subprocess.run(["sudo", "systemctl", "start", "meowrch-auto-update.timer"], check=True)
+            
+            logger.success("Automatic package updates configured and enabled!")
+            logger.info("Updates will run 5 minutes after boot and then every 24 hours")
+            logger.info("Check logs with: sudo journalctl -u meowrch-auto-update.service")
+            
+        except Exception as e:
+            logger.error(f"Failed to configure automatic package updates: {e}")
+            logger.error(f"Full error: {traceback.format_exc()}")

@@ -1,0 +1,15 @@
+[Unit]
+Description=Meowrch Automatic Package Updates
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Environment=HOME=/root
+ExecStart=/usr/local/bin/meowrch-auto-update.sh
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

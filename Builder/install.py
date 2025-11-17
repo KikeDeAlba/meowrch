@@ -74,7 +74,7 @@ class Builder:
         PackageManager.install_nvm()
 
         self.daemons_setting()
-        PostInstallation.apply()
+        PostInstallation.apply(auto_update_packages=self.build_options.auto_update_packages)
         logger.warning(
             "The script was unable to automatically install these packages."
             "Try installing them manually."

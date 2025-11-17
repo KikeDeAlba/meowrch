@@ -43,6 +43,7 @@ class BuildOptions:
     aur_helper: AurHelper
     enable_multilib: bool
     update_arch_database: bool
+    auto_update_packages: bool
     install_drivers: bool
     intel_driver: bool
     nvidia_driver: bool
